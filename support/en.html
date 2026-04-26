@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Train Deploy — Support</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: #0a1520;
+      color: #c8d8e8;
+      min-height: 100vh;
+    }
+
+    header {
+      background: rgba(10,21,32,0.97);
+      border-bottom: 1px solid #1e3048;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .title-block { display: flex; align-items: baseline; gap: 10px; }
+    .app-name { font-size: 22px; font-weight: 900; color: #f0f8ff; letter-spacing: 2px; }
+    .app-sub  { font-size: 12px; color: #5a7a9a; }
+
+    .lang-switch a {
+      color: #38bdf8;
+      text-decoration: none;
+      font-size: 13px;
+      border: 1px solid #38bdf8;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    .lang-switch a:hover { background: rgba(56,189,248,0.15); }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f0f8ff;
+      margin: 40px 0 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e3048;
+    }
+    h2:first-of-type { margin-top: 0; }
+
+    p { line-height: 1.8; font-size: 14px; color: #a0b8cc; margin-bottom: 10px; }
+
+    .about-box {
+      background: #0f1e2d;
+      border: 1px solid #1e3048;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 10px;
+    }
+    .about-box p { margin: 0; }
+
+    .faq-item { margin-bottom: 20px; }
+    .faq-q {
+      font-size: 14px;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 6px;
+    }
+    .faq-a {
+      font-size: 14px;
+      color: #a0b8cc;
+      line-height: 1.8;
+      padding-left: 12px;
+      border-left: 2px solid #1e3048;
+    }
+
+    .contact-box {
+      background: #0f1e2d;
+      border: 1px solid #1e3048;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .contact-box a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+    .contact-box a:hover { text-decoration: underline; }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: #3a5a7a;
+      border-top: 1px solid #1e3048;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <span class="app-name">TRAIN DEPLOY</span>
+    <span class="app-sub">Suburban Fleet Deployment Sim</span>
+  </div>
+  <div class="lang-switch">
+    <a href="index.html">日本語</a>
+  </div>
+</header>
+
+<main>
+
+  <h2>About the App</h2>
+  <div class="about-box">
+    <p>Train Deploy is a turn-based simulation game set on Tokyo-area rail lines from 1993 to 2035. You manage fleet assignments across routes — retiring aging cars, transferring surplus stock, and procuring new vehicles — while keeping each line's operational requirements and technology standards met.</p>
+  </div>
+
+  <h2>FAQ</h2>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. Where is my save data stored?</div>
+    <div class="faq-a">Your progress is saved automatically on your device. Tap "Continue" on the title screen to resume where you left off.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. What is the difference between Normal and Trainee mode?</div>
+    <div class="faq-a">Trainee mode covers only 4 lines (Yamanote, Keihin-Tohoku, Chuo-Sobu Local, and Saikyo) and includes a tutorial. It is recommended for first-time players. Normal mode covers all 13 lines.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. What are manufacturing slots?</div>
+    <div class="faq-a">Manufacturing slots limit how many new cars you can procure each quarter (maximum 8). The counter resets every turn. Transfers, retirements, and life-extension work do not consume slots.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. My reputation keeps dropping. What should I do?</div>
+    <div class="faq-a">Check that each line meets its required car count. Penalties also apply if TIMS-required lines still have legacy cars, or if platform door deadlines are missed. Use the Forecast tab to anticipate upcoming requirements and plan ahead.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. An aging alert appeared. What are my options?</div>
+    <div class="faq-a">You have three choices: ① Life Extension (pay to keep the car running), ② Retire (fleet count decreases), or ③ Defer (handle within the quarter — missing the deadline costs Rep −3).</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. The app won't launch or keeps crashing.</div>
+    <div class="faq-a">Try force-quitting and relaunching the app. If the issue persists, please contact us at the address below and include your device model and OS version.</div>
+  </div>
+
+  <h2>Contact</h2>
+  <div class="contact-box">
+    <p>For bug reports, feedback, or any questions, please reach out by email.</p>
+    <p style="margin-top:10px;">
+      <a href="mailto:soldato1988@gmail.com">soldato1988@gmail.com</a>
+    </p>
+    <p style="margin-top:10px; font-size:13px; color:#3a5a7a;">When reporting an issue, including your device model, OS version, and a description of what happened helps us respond faster.</p>
+  </div>
+
+</main>
+
+<footer>
+  &copy; 2025 Train Deploy. All rights reserved.
+</footer>
+
+</body>
+</html>

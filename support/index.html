@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Train Deploy — サポート</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #0a1520;
+      color: #c8d8e8;
+      min-height: 100vh;
+    }
+
+    header {
+      background: rgba(10,21,32,0.97);
+      border-bottom: 1px solid #1e3048;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .title-block { display: flex; align-items: baseline; gap: 10px; }
+    .app-name { font-size: 22px; font-weight: 900; color: #f0f8ff; letter-spacing: 2px; }
+    .app-sub  { font-size: 12px; color: #5a7a9a; }
+
+    .lang-switch a {
+      color: #38bdf8;
+      text-decoration: none;
+      font-size: 13px;
+      border: 1px solid #38bdf8;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    .lang-switch a:hover { background: rgba(56,189,248,0.15); }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f0f8ff;
+      margin: 40px 0 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e3048;
+    }
+    h2:first-of-type { margin-top: 0; }
+
+    p { line-height: 1.8; font-size: 14px; color: #a0b8cc; margin-bottom: 10px; }
+
+    .about-box {
+      background: #0f1e2d;
+      border: 1px solid #1e3048;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 10px;
+    }
+    .about-box p { margin: 0; }
+
+    .faq-item { margin-bottom: 20px; }
+    .faq-q {
+      font-size: 14px;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 6px;
+    }
+    .faq-a {
+      font-size: 14px;
+      color: #a0b8cc;
+      line-height: 1.8;
+      padding-left: 12px;
+      border-left: 2px solid #1e3048;
+    }
+
+    .contact-box {
+      background: #0f1e2d;
+      border: 1px solid #1e3048;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .contact-box a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+    .contact-box a:hover { text-decoration: underline; }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: #3a5a7a;
+      border-top: 1px solid #1e3048;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <span class="app-name">TRAIN DEPLOY</span>
+    <span class="app-sub">首都圏車両転配シミュレーション</span>
+  </div>
+  <div class="lang-switch">
+    <a href="en.html">English</a>
+  </div>
+</header>
+
+<main>
+
+  <h2>アプリについて</h2>
+  <div class="about-box">
+    <p>Train Deploy は、JR東日本の首都圏路線を舞台に1993年から2035年まで車両配置を管理するターン制シミュレーションゲームです。老朽化した旧型車の転配・廃車・新車調達を計画し、各路線の必要運用数と技術要件を満たしながら評価スコアの最大化を目指します。</p>
+  </div>
+
+  <h2>よくある質問</h2>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. セーブデータはどこに保存されますか？</div>
+    <div class="faq-a">ゲームの進行状況はデバイス内に自動保存されます。タイトル画面から「続きから再開」で中断した状態から再開できます。</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 見習モードと通常モードの違いは？</div>
+    <div class="faq-a">見習モードは山手線・京浜東北線・中央総武緩行線・埼京線の4路線のみを管理します。路線数が少なくチュートリアル付きのため、初めての方にはこちらがおすすめです。通常モードは全13路線が対象です。</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 製造枠とは何ですか？</div>
+    <div class="faq-a">1四半期（3ヶ月）に調達できる新車の上限本数です。最大8本で、ターンが進むとリセットされます。転配・廃車・延命工事は製造枠を消費しません。</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 評価（レピュテーション）が下がり続けます。</div>
+    <div class="faq-a">各路線の必要運用数を満たしているか確認してください。また、TIMS必須路線に旧型車が残っている場合やホームドア対応が遅れている場合もペナルティになります。予告タブで今後のイベントを先読みして計画的に対応しましょう。</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 車齢アラートが表示されました。どうすればいいですか？</div>
+    <div class="faq-a">寿命に達した車両には3つの選択肢があります。①延命工事（費用をかけて継続使用）、②廃車（運用数が減少）、③今期中に対応（1ターン後回しにできますが、未対応のまま終了すると評価-3のペナルティ）。</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. アプリが起動しない / クラッシュする。</div>
+    <div class="faq-a">アプリを完全に終了して再起動してみてください。解決しない場合は、下記の連絡先までデバイスの種類とOSバージョンをお知らせください。</div>
+  </div>
+
+  <h2>お問い合わせ</h2>
+  <div class="contact-box">
+    <p>ご意見・不具合報告は下記メールアドレスまでご連絡ください。</p>
+    <p style="margin-top:10px;">
+      <a href="mailto:soldato1988@gmail.com">soldato1988@gmail.com</a>
+    </p>
+    <p style="margin-top:10px; font-size:13px; color:#3a5a7a;">お問い合わせの際は、デバイスの種類・OSバージョン・発生した状況をできる限りご記載いただけると対応がスムーズです。</p>
+  </div>
+
+</main>
+
+<footer>
+  &copy; 2025 Train Deploy. All rights reserved.
+</footer>
+
+</body>
+</html>

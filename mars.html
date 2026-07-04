@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>みどりの窓口 ─ 発券指令</title>
+<style>
+  :root{
+    --crt:#0a1410;--crt2:#0d1c16;
+    --phos:#5ef08f;--phos-dim:#3f9968;--phos-soft:#9cf3bd;
+    --amber:#f5c150;--red:#ff6b62;
+    --paper:#efe9d8;--paper-line:#c9b98f;--paper-ink:#181410;--paper-ink2:#4a4133;
+    --steel:#172420;--steel-line:#2c4339;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background-color:#050907;font-family:'IBM Plex Mono','SFMono-Regular',Menlo,monospace;color:var(--phos);overflow:hidden;position:fixed;width:100%;height:100%;display:flex;flex-direction:column;user-select:none}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.16) 3px);mix-blend-mode:multiply;opacity:.45}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:51;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.5) 100%)}
+  .wrap{flex:1;display:flex;flex-direction:column;min-height:0;max-width:520px;margin:0 auto;width:100%;position:relative;z-index:1}
+
+  .topclock{flex:0 0 auto;background:#0a120e;border-bottom:1px solid var(--steel-line);display:flex;align-items:center;justify-content:space-between;padding:5px 12px}
+  .topclock .where{font-size:9px;letter-spacing:.18em;color:var(--phos-dim);text-transform:uppercase}
+  .topclock .now{font-size:13px;font-weight:700;color:var(--phos-soft);font-variant-numeric:tabular-nums;letter-spacing:.05em}
+  .topclock .now small{color:var(--phos-dim);font-size:10px;margin-left:5px;font-weight:400}
+
+  .rail{display:flex;gap:1px;background:var(--steel-line);border-bottom:1px solid var(--steel-line);flex:0 0 auto}
+  .rail .cell{background:var(--steel);padding:7px 10px;flex:1;min-width:0}
+  .rail .lbl{font-size:8px;letter-spacing:.16em;color:var(--phos-dim);text-transform:uppercase}
+  .rail .val{font-size:15px;font-weight:600;color:var(--phos-soft);font-variant-numeric:tabular-nums;line-height:1.2}
+  .rail .val.warn{color:var(--amber)} .rail .val.bad{color:var(--red)}
+
+  .tbar{height:4px;background:var(--steel);flex:0 0 auto;overflow:hidden}
+  .tbar > i{display:block;height:100%;width:100%;background:var(--phos);transition:width .25s linear}
+  .tbar > i.warn{background:var(--amber)} .tbar > i.bad{background:var(--red)}
+
+  .stage{flex:1;min-height:0;overflow-y:auto;padding:12px 12px 8px;display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
+
+  .slip{background:var(--paper);color:var(--paper-ink);border-radius:2px;padding:13px 15px 15px;position:relative;box-shadow:0 6px 18px rgba(0,0,0,.5);background-image:repeating-linear-gradient(0deg,transparent 0 26px,rgba(201,185,143,.4) 26px 27px);flex:0 0 auto}
+  .slip::before{content:"窓 口 受 付 票";position:absolute;top:-1px;right:10px;font-size:8px;letter-spacing:.3em;color:#8a7c54;background:var(--paper);padding:2px 4px}
+  .slip .who{font-size:10px;letter-spacing:.08em;color:var(--paper-ink2);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .slip .who b{font-size:11px;color:var(--paper-ink);font-weight:700}
+  .badge{font-size:9px;letter-spacing:.06em;font-weight:700;padding:2px 6px;border-radius:2px;color:#fff}
+  .badge.gak{background:#b5452e}
+  .badge.pax{background:#3a6a8c}
+  .req{font-size:15px;line-height:1.55;color:var(--paper-ink);font-weight:600}
+  .req .em{background:#d8c47e;padding:0 3px;border-radius:1px;font-weight:700;white-space:nowrap;color:#141009}
+  .req .quiet{color:var(--paper-ink2);font-size:13px;font-weight:500}
+  .req .cond{display:inline-block;margin-top:4px;font-size:13px;color:#8a3b1e;font-weight:700}
+
+  .build{background:var(--crt);border:1px solid var(--steel-line);border-radius:3px;flex:0 0 auto}
+  .build h4{font-size:9px;letter-spacing:.22em;color:var(--phos-dim);text-transform:uppercase;padding:8px 11px 6px;border-bottom:1px dashed var(--steel-line);font-weight:700;display:flex;justify-content:space-between}
+  .slots{padding:9px 11px;display:flex;flex-direction:column;gap:6px}
+  .slot{display:flex;align-items:center;gap:9px}
+  .slot .k{font-size:9px;letter-spacing:.06em;color:var(--phos-dim);width:54px;flex:0 0 auto;text-transform:uppercase}
+  .slot .v{flex:1;min-width:0;background:var(--crt2);border:1px solid var(--steel-line);border-radius:2px;padding:8px 10px;font-size:13px;color:var(--phos-soft);min-height:34px;display:flex;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slot .v.empty{color:var(--phos-dim);opacity:.7}
+  .slot .v.set{border-color:var(--phos-dim);box-shadow:inset 0 0 12px rgba(94,240,143,.07);color:var(--phos-soft)}
+
+  .keypad{flex:0 0 auto;border-top:1px solid var(--steel-line);background:#070d0a;padding:9px 12px calc(9px + env(safe-area-inset-bottom))}
+  .kp-title{font-size:9px;letter-spacing:.16em;color:var(--phos-dim);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .kp-title .step{color:var(--phos-soft);font-weight:700}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .opt{background:var(--steel);border:1px solid var(--steel-line);color:var(--phos-soft);border-radius:3px;padding:11px 10px;font-family:inherit;font-size:13px;text-align:left;cursor:pointer;line-height:1.3;transition:transform .05s,background .12s;display:flex;flex-direction:column;gap:2px;min-height:46px;justify-content:center}
+  .opt small{font-size:9px;color:var(--phos-dim);letter-spacing:.03em}
+  .opt:active{transform:scale(.97);background:#1f322a}
+  .opt.full{grid-column:1/-1}
+  .opt.tt{flex-direction:row;align-items:center;justify-content:space-between;gap:8px}
+  .opt.tt .seat{font-size:10px;font-weight:700;padding:2px 7px;border-radius:2px;letter-spacing:.04em;white-space:nowrap}
+  .seat.vac{background:#1d4633;color:var(--phos)}
+  .seat.few{background:#5a4a1d;color:var(--amber)}
+  .seat.full{background:#5a2420;color:var(--red)}
+  .opt .timecol{font-variant-numeric:tabular-nums}
+  .opt .timecol b{font-size:15px;color:var(--phos-soft)}
+  .opt .timecol small{display:block}
+  .opt .timecol .eta{color:var(--phos-dim);font-size:9px}
+
+  .actions{display:flex;gap:7px;margin-top:9px}
+  .btn{flex:1;font-family:inherit;font-size:13px;font-weight:700;letter-spacing:.06em;padding:13px;border-radius:3px;cursor:pointer;border:1px solid;transition:transform .05s}
+  .btn:active{transform:scale(.98)}
+  .btn.issue{background:#2c6b48;border-color:var(--phos);color:#f0fff6}
+  .btn.issue:disabled{opacity:.32;cursor:not-allowed;filter:grayscale(.5)}
+  .btn.back{flex:0 0 80px;background:transparent;border-color:var(--steel-line);color:var(--phos-soft)}
+  .btn.help{flex:0 0 60px;background:#2a2410;border-color:#5a4a1d;color:var(--amber);padding:6px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1}
+  .btn.help .ic{font-size:18px}
+  .btn.help .hl{font-size:8px;letter-spacing:.02em;font-weight:700;color:#e8c87a}
+  .btn.help:active{transform:scale(.96)}
+
+  /* ヘルプ確認モーダル */
+  .modal{position:fixed;inset:0;z-index:62;display:flex;align-items:center;justify-content:center;background:rgba(2,6,4,.8);opacity:0;pointer-events:none;transition:opacity .16s;padding:24px}
+  .modal.on{opacity:1;pointer-events:auto}
+  .modal .box{background:var(--steel);border:1px solid var(--steel-line);border-radius:5px;max-width:340px;width:100%;padding:20px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.6);transform:scale(.94);transition:transform .18s}
+  .modal.on .box{transform:scale(1)}
+  .modal .ttl{font-size:15px;font-weight:700;color:var(--phos-soft);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .modal .msg{font-size:13px;color:#9fc4ae;line-height:1.7;margin-bottom:18px}
+  .modal .msg .pen{color:var(--amber);font-weight:700}
+  .modal .mbtns{display:flex;gap:8px}
+  .modal .mbtn{flex:1;font-family:inherit;font-size:13px;font-weight:700;padding:12px;border-radius:3px;cursor:pointer;border:1px solid}
+  .modal .mbtn.no{background:transparent;border-color:var(--steel-line);color:var(--phos-soft)}
+  .modal .mbtn.yes{background:#5a4a1d;border-color:var(--amber);color:#fff3d6}
+  .modal .mbtn:active{transform:scale(.97)}
+
+  /* 助役ヒントで開く正解（オレンジ） */
+  .opt.reveal{background:#5a4416 !important;border-color:var(--amber) !important;color:#fff3d6 !important;box-shadow:0 0 0 1px var(--amber),0 0 14px rgba(245,193,80,.35)}
+  .opt.reveal small{color:#e8c87a !important}
+
+  .flash{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(2,6,4,.84);opacity:0;pointer-events:none;transition:opacity .18s;padding:20px}
+  .flash.on{opacity:1;pointer-events:auto}
+  .verdict{text-align:center;font-weight:700;letter-spacing:.03em;max-width:460px;transform:scale(.92);transition:transform .2s;width:100%}
+  .flash.on .verdict{transform:scale(1)}
+  .verdict .big{font-size:32px;line-height:1.1;margin-bottom:14px}
+  .verdict.ok .big{color:var(--phos)} .verdict.ng .big{color:var(--red)}
+  .verdict .ticket{background:var(--paper);color:var(--paper-ink);border-radius:3px;padding:14px 16px;text-align:left;font-size:12px;line-height:1.65;box-shadow:0 8px 24px rgba(0,0,0,.6);margin-bottom:16px;border-left:5px solid var(--phos-dim)}
+  .verdict.ng .ticket{border-left-color:var(--red)}
+  .verdict .ticket .tt{font-size:9px;letter-spacing:.2em;color:#7a6d49;text-transform:uppercase;margin-bottom:6px}
+  .verdict .ticket b{color:var(--paper-ink)}
+  .verdict .err{color:#c0352c;font-weight:700;font-size:12px;margin-top:6px}
+  .verdict .tap{font-size:11px;color:var(--phos-dim);letter-spacing:.16em;text-transform:uppercase}
+
+  .screen{position:absolute;inset:0;z-index:40;background:#050907;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;overflow-y:auto}
+  .screen.hide{display:none}
+  .logo{font-size:11px;letter-spacing:.36em;color:var(--phos-dim);text-transform:uppercase;margin-bottom:14px}
+  .title{font-size:30px;font-weight:700;color:var(--phos-soft);line-height:1.15;margin-bottom:6px}
+  .title .g{color:var(--phos)}
+  .sub{font-size:12px;color:#8fb8a0;line-height:1.8;max-width:360px;margin-bottom:22px}
+  .sub b{color:var(--phos-soft);font-weight:700}
+  .modes{display:flex;flex-direction:column;gap:9px;margin-bottom:22px;width:100%;max-width:340px}
+  .mode{font-family:inherit;background:var(--steel);border:1px solid var(--steel-line);color:#8fb8a0;padding:13px 16px;border-radius:4px;cursor:pointer;text-align:left}
+  .mode.sel{border-color:var(--phos);background:#143524}
+  .mode .mt{font-size:14px;font-weight:700;color:var(--phos-soft);margin-bottom:3px}
+  .mode .md{font-size:10px;color:var(--phos-dim);line-height:1.5}
+  .mode.sel .md{color:#8fb8a0}
+  .start-btn{font-family:inherit;font-size:15px;font-weight:700;letter-spacing:.08em;background:#2c6b48;border:1px solid var(--phos);color:#f0fff6;padding:15px 44px;border-radius:3px;cursor:pointer}
+  .start-btn:active{transform:scale(.97)}
+  .final-stat{display:flex;gap:1px;background:var(--steel-line);border:1px solid var(--steel-line);border-radius:3px;overflow:hidden;margin-bottom:24px}
+  .final-stat .c{background:var(--steel);padding:14px 18px}
+  .final-stat .l{font-size:9px;letter-spacing:.14em;color:var(--phos-dim);text-transform:uppercase}
+  .final-stat .n{font-size:24px;font-weight:700;color:var(--phos-soft);font-variant-numeric:tabular-nums}
+  .grade{font-size:64px;font-weight:700;line-height:1;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<div class="screen" id="startScreen">
+  <div class="logo">JR ─ Multi Access Reservation Sys.</div>
+  <div class="title">みどりの窓口<br><span class="g">発券指令</span></div>
+  <div class="sub">要望を読み、端末を叩いて正しい一枚を。<br>
+    沖縄を除く<b>県庁所在地46駅</b>。経路・列車を選び、<b>時刻表から条件に合う便</b>を空席照会、座席と人数を取って発券。</div>
+  <div class="modes" id="modeSel">
+    <button class="mode sel" data-mode="beginner">
+      <div class="mt">初心者モード</div>
+      <div class="md">通常の速さ（36秒/件）。誤った選択肢を押すとヒントが出る。</div>
+    </button>
+    <button class="mode" data-mode="veteran">
+      <div class="mt">ベテランモード</div>
+      <div class="md">繁忙期の速さ（24秒/件）。ヒントなし。誤りは発券して初めて判明する。</div>
+    </button>
+  </div>
+  <button class="start-btn" id="startBtn">窓口を開ける</button>
+</div>
+
+<div class="screen hide" id="endScreen">
+  <div class="logo">本日の営業 終了</div>
+  <div class="grade" id="gradeMark">A</div>
+  <div class="title" id="endTitle" style="font-size:20px;margin-bottom:18px"></div>
+  <div class="final-stat">
+    <div class="c"><div class="l">発券数</div><div class="n" id="fIssued">0</div></div>
+    <div class="c"><div class="l">正確率</div><div class="n" id="fAcc">0%</div></div>
+    <div class="c"><div class="l">得点</div><div class="n" id="fScore">0</div></div>
+  </div>
+  <button class="start-btn" id="againBtn">もう一度</button>
+</div>
+
+<div class="wrap">
+  <div class="topclock">
+    <span class="where">JR ○○駅 みどりの窓口</span>
+    <span class="now" id="clock">--:--<small id="clockSec">:--</small></span>
+  </div>
+  <div class="rail">
+    <div class="cell"><div class="lbl">受付 No.</div><div class="val" id="rTicket">001</div></div>
+    <div class="cell"><div class="lbl">得点</div><div class="val" id="rScore">0</div></div>
+    <div class="cell"><div class="lbl">連続正解</div><div class="val" id="rStreak">0</div></div>
+    <div class="cell"><div class="lbl">残時間</div><div class="val" id="rTime">36.0</div></div>
+  </div>
+  <div class="tbar"><i id="tbar"></i></div>
+
+  <div class="stage" id="stage">
+    <div class="slip" id="slip"></div>
+    <div class="build">
+      <h4><span>発券端末 ─ 入力中</span><span>MR-52</span></h4>
+      <div class="slots">
+        <div class="slot"><span class="k">区間</span><div class="v empty" id="sSeg">― 未入力 ―</div></div>
+        <div class="slot"><span class="k">経路</span><div class="v empty" id="sRoute">― 未入力 ―</div></div>
+        <div class="slot"><span class="k">列車</span><div class="v empty" id="sTrain">― 未入力 ―</div></div>
+        <div class="slot"><span class="k">便/座席</span><div class="v empty" id="sSeat">― 未入力 ―</div></div>
+        <div class="slot"><span class="k">人数</span><div class="v empty" id="sPax">― 未入力 ―</div></div>
+        <div class="slot"><span class="k">券種</span><div class="v empty" id="sKind">― 未入力 ―</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="keypad">
+    <div class="kp-title"><span id="kpLabel">入力項目</span><span class="step" id="kpStep"></span></div>
+    <div class="opts" id="opts"></div>
+    <div class="actions">
+      <button class="btn back" id="backBtn">戻る</button>
+      <button class="btn help" id="helpBtn" title="駅助役の助けを求める"><span class="ic">🖐️</span><span class="hl">助役に聞く</span></button>
+      <button class="btn issue" id="issueBtn" disabled>発券する</button>
+    </div>
+  </div>
+</div>
+
+<div class="flash" id="flash"><div class="verdict" id="verdict"></div></div>
+
+<div class="modal" id="helpModal">
+  <div class="box">
+    <div class="ttl">🖐️ 駅助役を呼ぶ</div>
+    <div class="msg">駅助役の助けを求めますか？<br>スコアが <span class="pen">-80</span> ですが良いですか？</div>
+    <div class="mbtns">
+      <button class="mbtn no" id="helpNo">やめる</button>
+      <button class="mbtn yes" id="helpYes">はい</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const ST={sapporo:"札幌",aomori:"青森",morioka:"盛岡",akita:"秋田",sendai:"仙台",yamagata:"山形",fukushima:"福島",mito:"水戸",utsunomiya:"宇都宮",maebashi:"前橋",saitama:"大宮",chiba:"千葉",tokyo:"東京",yokohama:"横浜",kofu:"甲府",niigata:"新潟",toyama:"富山",kanazawa:"金沢",fukui:"福井",nagano:"長野",gifu:"岐阜",shizuoka:"静岡",nagoya:"名古屋",tsu:"津",otsu:"大津",kyoto:"京都",osaka:"大阪",kobe:"神戸",nara:"奈良",wakayama:"和歌山",tottori:"鳥取",matsue:"松江",okayama:"岡山",hiroshima:"広島",yamaguchi:"山口",tokushima:"徳島",takamatsu:"高松",matsuyama:"松山",kochi:"高知",fukuoka:"福岡(博多)",saga:"佐賀",nagasaki:"長崎",kumamoto:"熊本",oita:"大分",miyazaki:"宮崎",kagoshima:"鹿児島"};
+
+const TRAINS={nozomi:{n:"のぞみ",t:"新幹線",min:150,hw:5},hikari:{n:"ひかり",t:"新幹線",min:175,hw:30},kodama:{n:"こだま",t:"新幹線",min:230,hw:20},mizuho:{n:"みずほ",t:"新幹線",min:225,hw:30},sakura:{n:"さくら",t:"新幹線",min:250,hw:30},tsubame:{n:"つばめ",t:"新幹線",min:50,hw:20},hayabusa:{n:"はやぶさ",t:"新幹線",min:95,hw:30},yamabiko:{n:"やまびこ",t:"新幹線",min:115,hw:30},komachi:{n:"こまち",t:"新幹線",min:230,hw:60},tsubasa:{n:"つばさ",t:"新幹線",min:165,hw:60},toki:{n:"とき",t:"新幹線",min:100,hw:30},kagayaki:{n:"かがやき",t:"新幹線",min:150,hw:60},asama:{n:"あさま",t:"新幹線",min:100,hw:30},thunderbird:{n:"サンダーバード",t:"在来特急",min:160,hw:60},shirasagi:{n:"しらさぎ",t:"在来特急",min:185,hw:60},haruka:{n:"はるか",t:"在来特急",min:80,hw:30},kuroshio:{n:"くろしお",t:"在来特急",min:65,hw:60},yakumo:{n:"やくも",t:"在来特急",min:170,hw:60},super_hakuto:{n:"スーパーはくと",t:"在来特急",min:155,hw:90},shinano:{n:"しなの",t:"在来特急",min:175,hw:60},hida:{n:"ひだ",t:"在来特急",min:230,hw:90},azusa:{n:"あずさ",t:"在来特急",min:95,hw:60},hitachi:{n:"ひたち",t:"在来特急",min:70,hw:60},sonic:{n:"ソニック",t:"在来特急",min:80,hw:30},nichirin:{n:"にちりん",t:"在来特急",min:210,hw:90},shiokaze:{n:"しおかぜ",t:"在来特急",min:165,hw:60},nanpu:{n:"南風",t:"在来特急",min:155,hw:60},uzushio:{n:"うずしお",t:"在来特急",min:55,hw:60},tsurugi:{n:"つるぎ",t:"新幹線",min:45,hw:30},hakutaka:{n:"はくたか",t:"新幹線",min:55,hw:60}};
+
+// seat: window/aisle/any/none, student, timeCond:{type:'arriveBy'|'departAfter'}, pax:{adult,child}
+const CASES=[
+  {from:"tokyo",to:"osaka",route:"東海道新幹線",routeBad:["北陸経由","中央本線経由"],trains:["nozomi"],trainBad:["thunderbird"],speedBad:["kodama"],speedReq:true,kind:"both",seat:"window",flavor:"新大阪まで一番早いやつで。窓側がいいな。",pax:{adult:1,child:0}},
+  {from:"tokyo",to:"nagoya",route:"東海道新幹線",routeBad:["中央西線(しなの)","東海道本線"],trains:["nozomi","hikari","kodama"],trainBad:["shinano"],kind:"both",seat:"together",flavor:"名古屋まで。大人2人、並びの席で。",pax:{adult:2,child:0},talk:{q:"2人並びでって言ったけど、自由席でもいいの？席は選べる？",reply:"じゃあ指定席でお願いします。",opts:[{t:"自由席は座席を選べないと案内し、指定席を勧める",ok:true},{t:"自由席でも並びを確保できると答える",ok:false,why:"自由席は座席指定できません"},{t:"どちらも同じだと答える",ok:false,why:"自由席と指定席は別物です"}]}},
+  {from:"tokyo",to:"kyoto",route:"東海道新幹線",routeBad:["湖西線経由","北陸経由"],trains:["nozomi","hikari","kodama"],trainBad:["haruka"],kind:"both",seat:"any",student:true,flavor:"京都まで。学割証出します。席はどこでも。",pax:{adult:1,child:0}},
+  {from:"osaka",to:"hiroshima",route:"山陽新幹線",routeBad:["伯備線経由","山陽本線"],trains:["nozomi","sakura"],trainBad:["yakumo"],speedBad:["kodama"],speedReq:true,kind:"both",seat:"together_window",flavor:"広島まで早いので。大人2人と子ども1人、窓側を含む並びで。",pax:{adult:2,child:1},talk:{q:"子どもが小さいので、隣同士で並びの3席を取れますか？",reply:"よかった、並びでお願いします。",opts:[{t:"並び席で確保します",ok:true},{t:"バラバラの席でもよいか尋ねる",ok:false,why:"並びを希望されています"},{t:"立ち席を案内する",ok:false,why:"指定席を希望されています"}]}},
+  {from:"osaka",to:"kagoshima",route:"山陽・九州新幹線",routeBad:["日豊本線経由","鹿児島本線(在来)"],trains:["mizuho","sakura"],trainBad:["nichirin","tsubame"],kind:"both",seat:"window",flavor:"鹿児島中央まで乗り換えなしで。窓側がいいわ。",pax:{adult:1,child:0},timeCond:{type:"arriveBy"}},
+  {from:"hiroshima",to:"fukuoka",route:"山陽新幹線",routeBad:["山陽本線","予讃線経由"],trains:["nozomi","mizuho","sakura"],trainBad:["sonic"],speedBad:["kodama"],speedReq:true,kind:"both",seat:"any",flavor:"博多まで早いの。席はおまかせ。",pax:{adult:1,child:0},talk:{q:"短い区間だし自由席で十分かな。指定席との違いって何？",reply:"なるほど、じゃあ指定席にしておくわ。",opts:[{t:"自由席は割安だが満席だと座れない旨を案内",ok:true},{t:"自由席の方が必ず座れると答える",ok:false,why:"自由席は着席保証がありません"},{t:"自由席は廃止されたと答える",ok:false,why:"事実と異なる案内"}]}},
+  {from:"fukuoka",to:"kumamoto",route:"九州新幹線",routeBad:["鹿児島本線(在来)","豊肥本線経由"],trains:["mizuho","sakura","tsubame"],trainBad:["sonic"],kind:"both",seat:"aisle",student:true,flavor:"熊本まで。学割証です。通路側で。",pax:{adult:1,child:0}},
+  {from:"tokyo",to:"sendai",route:"東北新幹線",routeBad:["常磐線経由","東北本線(在来)"],trains:["hayabusa","yamabiko"],trainBad:["hitachi","komachi"],kind:"both",seat:"together_window",flavor:"仙台まで。大人1・子ども2、窓側を含む並びで。",pax:{adult:1,child:2},talk:{q:"少しゆったり座りたいのですが、グリーン車って高いですか？",reply:"うーん、今回は普通車でいいです。",opts:[{t:"差額を案内し、希望を確認する",ok:true},{t:"勝手にグリーン車で発券する",ok:false,why:"確認せず手配は不可"},{t:"グリーン車は無いと答える",ok:false,why:"事実と異なる案内"}]}},
+  {from:"tokyo",to:"akita",route:"東北・秋田新幹線",routeBad:["羽越本線経由","奥羽本線(在来)"],trains:["komachi"],trainBad:["hayabusa","tsubasa"],kind:"both",seat:"together",flavor:"秋田まで直通で。大人2人、並びで。乗り換えたくないの。",pax:{adult:2,child:0},timeCond:{type:"arriveBy"},talk:{q:"こまちって全部指定席だっけ？自由席はないの？",reply:"そうなんだ、指定席で取ってください。",opts:[{t:"こまちは全車指定席と案内する",ok:true},{t:"自由席もあると答える",ok:false,why:"こまちは全車指定席です"},{t:"立ち席なら無料と答える",ok:false,why:"事実と異なる案内"}]}},
+  {from:"tokyo",to:"yamagata",route:"東北・山形新幹線",routeBad:["仙山線経由","羽越本線経由"],trains:["tsubasa"],trainBad:["komachi","yamabiko"],kind:"both",seat:"aisle",flavor:"山形までつばさで。通路側ね。",pax:{adult:1,child:0}},
+  {from:"tokyo",to:"aomori",route:"東北新幹線",routeBad:["秋田新幹線経由","津軽線経由"],trains:["hayabusa"],trainBad:["komachi"],kind:"both",seat:"window",student:true,flavor:"新青森まで速いので。学割証あります。窓側。",pax:{adult:1,child:0}},
+  {from:"tokyo",to:"niigata",route:"上越新幹線",routeBad:["北陸新幹線経由","信越本線経由"],trains:["toki"],trainBad:["kagayaki","asama"],kind:"both",seat:"together",flavor:"新潟までときで。子連れなの、大人2子ども2、並びで。",pax:{adult:2,child:2},talk:{q:"4人で固まって座りたいんだけど、2列+2列で前後とかになる？",reply:"前後でも構いません、お願いします。",opts:[{t:"並び・前後など座席の配置を確認して手配する",ok:true},{t:"必ず4列横並びになると断言する",ok:false,why:"車両により配置は異なります"},{t:"座席は選べないと突き放す",ok:false,why:"配置の相談に応じるべき"}]}},
+  {from:"tokyo",to:"nagano",route:"北陸新幹線",routeBad:["中央本線(あずさ)","篠ノ井線経由"],trains:["kagayaki","asama"],trainBad:["azusa","shinano"],kind:"both",seat:"window",flavor:"長野まで新幹線で。窓側。",pax:{adult:1,child:0},timeCond:{type:"departAfter"}},
+  {from:"tokyo",to:"kanazawa",route:"北陸新幹線",routeBad:["米原経由(しらさぎ)","湖西線経由"],trains:["kagayaki"],trainBad:["thunderbird","shirasagi"],kind:"both",seat:"aisle",flavor:"金沢までかがやきで。通路側。",pax:{adult:1,child:0},talk:{q:"通路側がいいけど、もし通路側が満席ならどうなる？",reply:"そう、なら安心。通路側でお願い。",opts:[{t:"その場合は別の便を案内できると伝える",ok:true},{t:"窓側で勝手に取ってしまう",ok:false,why:"希望と異なる席は確認が必要"},{t:"満席ならもう乗れないと答える",ok:false,why:"他の便を案内すべき"}]}},
+  {from:"tokyo",to:"toyama",route:"北陸新幹線",routeBad:["高山本線経由","米原経由"],trains:["kagayaki"],trainBad:["hida"],kind:"both",seat:"together",flavor:"富山まで直通で。大人2、並びで。",pax:{adult:2,child:0}},
+  {from:"osaka",to:"kanazawa",route:"湖西線経由→敦賀乗換",routeBad:["北陸新幹線直通","米原経由"],trains:["thunderbird"],trainBad:["kagayaki","shirasagi"],kind:"both",seat:"window",flavor:"金沢まで。大阪からだと敦賀で乗り換えよね。窓側で。",pax:{adult:1,child:0},leg2:{via:"敦賀",to:"kanazawa",trains:["tsurugi","kagayaki","hakutaka"],trainBad:["sonic","shinano"],label:"敦賀→金沢（北陸新幹線）"},talk:{q:"金沢まで一本で行けないの？敦賀で乗り換えなんて面倒ね。",reply:"仕方ないわね、乗り換えで手配して。",opts:[{t:"敦賀で北陸新幹線に乗換が必要と案内する",ok:true},{t:"サンダーバードが金沢まで直通と答える",ok:false,why:"2024年春から敦賀乗換が必要"},{t:"乗り換えはないと答える",ok:false,why:"事実と異なる案内"}]}},
+  {from:"nagoya",to:"kanazawa",route:"米原経由→敦賀乗換",routeBad:["北陸新幹線直通","高山本線経由"],trains:["shirasagi"],trainBad:["thunderbird","hida"],kind:"both",seat:"together",flavor:"名古屋から金沢、しらさぎで。敦賀乗換でいいわ。大人1子ども1、並びで。",pax:{adult:1,child:1},leg2:{via:"敦賀",to:"kanazawa",trains:["tsurugi","kagayaki","hakutaka"],trainBad:["shinano","hida"],label:"敦賀→金沢（北陸新幹線）"}},
+  {from:"nagoya",to:"nagano",route:"中央西線(篠ノ井線)",routeBad:["北陸新幹線経由","高山本線経由"],trains:["shinano"],trainBad:["asama","azusa"],kind:"both",seat:"window",student:true,flavor:"長野までしなので。学割証出します。窓側で。",pax:{adult:1,child:0}},
+  {from:"nagoya",to:"toyama",route:"高山本線経由",routeBad:["北陸新幹線経由","米原経由"],trains:["hida"],trainBad:["shirasagi","shinano"],kind:"both",seat:"together",flavor:"高山経由で富山まで。ひだで。大人2、並びで。",pax:{adult:2,child:0},timeCond:{type:"departAfter"}},
+  {from:"tokyo",to:"kofu",route:"中央本線",routeBad:["身延線経由","東海道経由"],trains:["azusa"],trainBad:["shinano"],kind:"both",seat:"window",flavor:"甲府まであずさで。窓側がいい。",pax:{adult:1,child:0}},
+  {from:"tokyo",to:"mito",route:"常磐線",routeBad:["水戸線経由","東北新幹線経由"],trains:["hitachi"],trainBad:["yamabiko","azusa"],kind:"both",seat:"together",flavor:"水戸までひたちで。大人1子ども1、並びで。",pax:{adult:1,child:1}},
+  {from:"osaka",to:"wakayama",route:"阪和線・紀勢本線",routeBad:["和歌山線経由","南海経由"],trains:["kuroshio"],trainBad:["haruka","thunderbird"],kind:"both",seat:"window",flavor:"和歌山までくろしおで。窓側で海見たいの。",pax:{adult:1,child:0},talk:{q:"海側の景色がいい窓側ってどっち？選んで取れる？",reply:"さすが、その窓側でお願いします。",opts:[{t:"進行方向と海側を確認して窓側を手配する",ok:true},{t:"窓側はどちらも同じだと適当に答える",ok:false,why:"海側の希望に配慮すべき"},{t:"景色は選べないと突き放す",ok:false,why:"座席の相談に応じるべき"}]}},
+  {from:"okayama",to:"matsue",route:"伯備線経由",routeBad:["山陰本線(全線)","山陽新幹線経由"],trains:["yakumo"],trainBad:["nozomi"],kind:"both",seat:"together",flavor:"松江までやくもで。大人2、並びで。",pax:{adult:2,child:0}},
+  {from:"kyoto",to:"tottori",route:"智頭急行経由",routeBad:["山陰本線経由","伯備線経由"],trains:["super_hakuto"],trainBad:["yakumo","kuroshio"],kind:"both",seat:"window",student:true,flavor:"鳥取までスーパーはくとで。学割証あります。窓側。",pax:{adult:1,child:0}},
+  {from:"fukuoka",to:"oita",route:"日豊本線(ソニック)",routeBad:["久大本線経由","九州新幹線経由"],trains:["sonic"],trainBad:["nichirin","mizuho"],kind:"both",seat:"aisle",flavor:"大分までソニックで。通路側。",pax:{adult:1,child:0},timeCond:{type:"arriveBy"},talk:{q:"指定席って言ったけど、自由席なら少し安くなる？",reply:"やっぱり指定席で確実に座りたいわ。",opts:[{t:"自由席は割安だが座席は確保されないと案内",ok:true},{t:"自由席でも通路側を指定できると答える",ok:false,why:"自由席は座席指定できません"},{t:"料金は全く同じだと答える",ok:false,why:"指定席料金がかかります"}]}},
+  {from:"fukuoka",to:"miyazaki",route:"日豊本線(にちりん)",routeBad:["九州新幹線+在来","肥薩線経由"],trains:["nichirin"],trainBad:["sonic","sakura"],kind:"both",seat:"any",flavor:"宮崎までにちりんで。",pax:{adult:1,child:0}},
+  {from:"okayama",to:"takamatsu",route:"瀬戸大橋線",routeBad:["宇高航路","本四備讃(普通)"],trains:["uzushio"],trainBad:["nanpu","yakumo"],kind:"both",seat:"together_window",flavor:"高松まで特急で。大人2子ども1、窓側を含む並びで。",pax:{adult:2,child:1},talk:{q:"子どもは6歳なんだけど、料金ってどうなるの？",reply:"そうなのね、ありがとう。",opts:[{t:"6歳でも小学生未満の扱いを確認して案内する",ok:true},{t:"年齢に関係なく大人料金だと答える",ok:false,why:"子どもは小児運賃が基本"},{t:"子どもは全員無料だと答える",ok:false,why:"無料には人数等の条件あり"}]}},
+  {from:"okayama",to:"matsuyama",route:"予讃線(瀬戸大橋経由)",routeBad:["内子線経由","土讃線経由"],trains:["shiokaze"],trainBad:["nanpu","uzushio"],kind:"both",seat:"aisle",flavor:"松山までしおかぜで。通路側ね。",pax:{adult:1,child:0}},
+  {from:"okayama",to:"kochi",route:"土讃線(瀬戸大橋経由)",routeBad:["予讃線経由","内子線経由"],trains:["nanpu"],trainBad:["shiokaze","uzushio"],kind:"both",seat:"window",flavor:"高知まで南風で。窓側で。",pax:{adult:1,child:0},timeCond:{type:"departAfter"}},
+
+  // 乗車券のみ（座席なし・時刻表なし）
+  {from:"kyoto",to:"osaka",route:"東海道本線(在来)",routeBad:["山陽新幹線経由","湖西線経由"],trains:["local_only"],trainBad:["nozomi","haruka"],kind:"ticket",seat:"none",flavor:"大阪まで新快速で行くから乗車券だけ。大人1。",pax:{adult:1,child:0},talk:{q:"新快速って特急券いるんだっけ？追加料金かかる？",reply:"乗車券だけでいいのね、助かるわ。",opts:[{t:"新快速は乗車券のみで乗れると案内する",ok:true},{t:"特急券が必要だと答える",ok:false,why:"新快速に特急券は不要"},{t:"指定席券を買わせる",ok:false,why:"不要な料金を取ってはいけない"}]}},
+  {from:"kobe",to:"osaka",route:"東海道本線(在来)",routeBad:["山陽新幹線経由","阪急経由"],trains:["local_only"],trainBad:["nozomi"],kind:"ticket",seat:"none",student:true,flavor:"大阪まで普通で。学割証あるので学割でお願いします。",pax:{adult:1,child:0}},
+  {from:"nara",to:"osaka",route:"大和路線(関西本線)",routeBad:["近鉄経由","東海道経由"],trains:["local_only"],trainBad:["haruka","kuroshio"],kind:"ticket",seat:"none",flavor:"大阪まで快速で。乗車券のみ、大人1子ども1。",pax:{adult:1,child:1}},
+
+  // 特急券のみ
+  {from:"tokyo",to:"shizuoka",route:"東海道新幹線",routeBad:["東海道本線","身延線経由"],trains:["hikari","kodama"],trainBad:["nozomi","azusa"],kind:"limited",seat:"window",flavor:"静岡まで。乗車券はあるので特急券だけ。窓側。",pax:{adult:1,child:0}},
+  {from:"osaka",to:"kyoto",route:"東海道新幹線",routeBad:["湖西線経由","東海道本線"],trains:["nozomi","hikari","kodama"],trainBad:["thunderbird","haruka"],kind:"limited",seat:"together",flavor:"京都まで新幹線で。乗車券は持ってるから特急券だけ。大人2、並びで。",pax:{adult:2,child:0}}
+];
+
+// 区間の概算営業キロ（学割は片道101km以上で適用可）
+const DIST={
+  "tokyo-osaka":515,"tokyo-nagoya":342,"tokyo-kyoto":477,"osaka-hiroshima":342,
+  "osaka-kagoshima":911,"hiroshima-fukuoka":281,"fukuoka-kumamoto":119,
+  "tokyo-sendai":352,"tokyo-akita":663,"tokyo-yamagata":360,"tokyo-aomori":714,
+  "tokyo-niigata":334,"tokyo-nagano":222,"tokyo-kanazawa":454,"tokyo-toyama":416,
+  "osaka-kanazawa":267,"nagoya-kanazawa":256,"nagoya-nagano":250,"nagoya-toyama":256,
+  "tokyo-kofu":134,"tokyo-mito":121,"osaka-wakayama":61,"okayama-matsue":160,
+  "kyoto-tottori":174,"fukuoka-oita":200,"fukuoka-miyazaki":414,
+  "okayama-takamatsu":72,"okayama-matsuyama":214,"okayama-kochi":179,
+  "kyoto-osaka":43,"kobe-osaka":33,"nara-osaka":37,"tokyo-shizuoka":180,"osaka-kyoto":43
+};
+function segKm(c){return DIST[c.from+"-"+c.to]||DIST[c.to+"-"+c.from]||999;}
+function gakuwariEligible(c){return segKm(c)>=101;}
+
+const KIND_LABEL={both:{label:"乗車券＋特急券"},ticket:{label:"乗車券のみ"},limited:{label:"特急券のみ"}};
+const SEAT_LABEL={window:"窓側",aisle:"通路側",any:"おまかせ",together:"並び席",together_window:"窓側を含む並び",separate:"離れた席"};
+
+const G={mode:"beginner",hint:true,perCase:36.0,idx:0,score:0,streak:0,issued:0,correct:0,cur:null,build:null,phase:0,timer:null,remain:0,lastTick:0,running:false,queue:[],schedule:[],simNow:0};
+const $=id=>document.getElementById(id);
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+function pad(n){return String(n).padStart(2,"0");}
+function hm(mins){mins=((mins%1440)+1440)%1440;return pad(Math.floor(mins/60))+":"+pad(mins%60);}
+
+/* 現在時刻：画面に出すのは業務時刻simNow（時刻表の基準と一致させる）。
+   時刻表の発車は必ずsimNowより後になるよう生成しているので、過ぎた便は出ない。
+   秒は窓口の臨場感として実時計の秒を流用するだけ。 */
+function refreshClock(){
+  $("clock").childNodes[0].nodeValue=hm(G.simNow);
+}
+function startClock(){
+  // 秒だけ動かす（分は案件ごとにsimNowで固定表示）
+  setInterval(()=>{ $("clockSec").textContent=":"+pad(new Date().getSeconds()); },1000);
+  $("clockSec").textContent=":"+pad(new Date().getSeconds());
+}
+
+function startGame(){
+  Object.assign(G,{idx:0,score:0,streak:0,issued:0,correct:0});
+  G.hint = G.mode==="beginner";
+  G.perCase = G.mode==="veteran"?24.0:36.0;
+  // 業務上の現在時刻（その日の窓口時刻）を朝9時台にセット、案件ごとに少し進む
+  G.simNow = 9*60 + (Math.random()*30|0);
+  refreshClock();
+  G.queue=shuffle(CASES);
+  $("startScreen").classList.add("hide");$("endScreen").classList.add("hide");
+  nextCase();
+}
+
+function nextCase(){
+  if(G.issued>=14){endGame();return;}
+  G.cur=G.queue[G.idx%G.queue.length];G.idx++;
+  G.simNow += 8+(Math.random()*14|0); // 業務時刻を進める
+  refreshClock();
+  G.build={seg:null,route:null,studentApplied:null,pax:null,kind:null,
+    legIndex:0, legs:[{train:null,trainNo:null,selSched:null,seatGiven:null,_seatBad:false,_schedBad:false}]};
+  if(G.cur.leg2) G.build.legs.push({train:null,trainNo:null,selSched:null,seatGiven:null,_seatBad:false,_schedBad:false});
+  G.phase=0;G.remain=G.perCase;
+  G.deadline=null;G.departAfter=null;
+  buildSchedule();
+  renderSlip();renderBuild();renderPhase();
+  $("rTicket").textContent=pad(G.issued+1).padStart(3,"0");
+  startTimer();
+}
+
+/* 時刻表生成：業務時刻simNow以降の便を並べる。所要時間からETA(到着時刻)も算出。
+   時間条件があれば、それを満たす便と満たさない便を混在させる */
+// 列車の上り/下り判定：下り＝起点から地方へ向かう＝奇数号、上り＝起点へ戻る＝偶数号。
+const DOWN_TERMINI={
+  nozomi:"osaka",hikari:"osaka",kodama:"osaka",mizuho:"kagoshima",sakura:"kagoshima",tsubame:"kagoshima",
+  hayabusa:"sapporo",yamabiko:"morioka",komachi:"akita",tsubasa:"yamagata",toki:"niigata",
+  kagayaki:"kanazawa",asama:"nagano",hakutaka:"kanazawa",tsurugi:"kanazawa",
+  thunderbird:"kanazawa",shirasagi:"kanazawa",haruka:"osaka",kuroshio:"wakayama",
+  yakumo:"matsue",super_hakuto:"tottori",shinano:"nagano",hida:"toyama",azusa:"kofu",
+  hitachi:"mito",sonic:"oita",nichirin:"miyazaki",shiokaze:"matsuyama",nanpu:"kochi",uzushio:"takamatsu"
+};
+function isDownbound(sysKey, fromKey, toKey){
+  const term=DOWN_TERMINI[sysKey];
+  if(!term) return true;
+  if(toKey===term) return true;
+  if(fromKey===term) return false;
+  return true;
+}
+function buildScheduleNo(sysKey, i, down, startNo){
+  // 発車時刻順（i昇順）に号数も昇順。方向で偶奇を固定（下り=奇数/上り=偶数）。
+  // startNo：この時刻表の開始号数（方向に応じた奇/偶の起点）。各便で+2して昇順を保つ。
+  const num = startNo + i*2;
+  return `${TRAINS[sysKey].n} ${num}号`;
+}
+
+// ── 乗り継ぎ（レグ）関連ヘルパ ──
+function curLeg(){return G.build.legs[G.build.legIndex];}
+function isLeg2(){return G.build.legIndex===1;}
+function legTrains(){ // 現在legの正解列車
+  const c=G.cur;
+  return isLeg2()? c.leg2.trains : c.trains;
+}
+function legTrainBad(){ // 現在legのダミー（経路外）
+  const c=G.cur;
+  return isLeg2()? (c.leg2.trainBad||[]) : (c.trainBad||[]);
+}
+function legSpeedBad(){ // 速達ダミーは1本目のみ
+  return isLeg2()? [] : (G.cur.speedBad||[]);
+}
+function legSegLabel(){ // 端末・受付に出すレグの区間表記
+  const c=G.cur;
+  if(isLeg2()) return `${c.leg2.via} → ${ST[c.leg2.to]}`;
+  return c.leg2? `${ST[c.from]} → ${c.leg2.via}` : `${ST[c.from]} → ${ST[c.to]}`;
+}
+
+function buildSchedule(trainKey){
+  const c=G.cur;
+  if(c.kind==="ticket"){G.schedule=[];G.deadline=null;return;}
+  // 選択された愛称のみで時刻表を構成する。
+  // （列車未選択で呼ばれた場合は正解系統の先頭で暫定生成）
+  const sysKey = trainKey || legTrains()[0];
+  G.schedSys = sysKey;
+  const list=[];
+  const cnt=4;
+  // 出発起点：通常は業務時刻simNowの少し後。
+  // ただし乗継2本目（敦賀→金沢のつるぎ）は、1本目で選んだ便の到着＋乗換時間以降から。
+  const TRANSFER_MIN = 8; // 敦賀の最短乗換8分
+  let base = G.simNow;
+  if(isLeg2() && G.build.legs[0].selSched){
+    base = G.build.legs[0].selSched.eta + TRANSFER_MIN;
+  }
+  const hw = TRAINS[sysKey].hw || 30; // この列車の運行間隔（分）
+  // 最初の便：頻度が高いほどすぐ来る。hwの範囲内でばらつき＋最低3分。
+  let t=base+3+(Math.random()*hw|0);
+  const npax = (c.pax.adult+c.pax.child); // 同乗人数
+  // 号数の起点：下り=奇数、上り=偶数。便ごとに+2して発車順に昇順。
+  const down = isDownbound(sysKey, c.from, isLeg2()? c.leg2.to : c.to);
+  let startNo = 1 + (Math.random()*20|0)*2; // 1,3,5,…の奇数起点
+  if(!down) startNo += 1;                    // 上りは偶数起点へ
+  for(let i=0;i<cnt;i++){
+    const dur=TRAINS[sysKey].min + (Math.random()*20-10|0);
+    let win,ais;const r=Math.random();
+    if(r<0.45){win="vac";ais="vac";}
+    else if(r<0.7){win="few";ais="vac";}
+    else if(r<0.85){win="full";ais="few";}
+    else{win="few";ais="full";}
+    // 並び席（together）：人数分が隣接で取れるか。空席が多い便ほど取りやすい。
+    const rank={vac:2,few:1,full:0};
+    const room=rank[win]+rank[ais]; // 0〜4
+    let together;
+    if(npax<=1) together="vac";
+    else if(room>=3) together = Math.random()<0.7?"vac":"few";
+    else if(room>=2) together = Math.random()<0.5?"few":"full";
+    else together="full";
+    // 窓側を含む並び：並びが取れ、かつ窓側が空いていること
+    let together_window;
+    if(together==="full"||win==="full") together_window="full";
+    else together_window = (together==="vac"&&win!=="few")?"vac":"few";
+    // 号数：発車順（i）に昇順、方向で偶奇固定
+    const trainNo = buildScheduleNo(sysKey, i, down, startNo);
+    list.push({sysKey,dep:t,eta:t+dur,no:trainNo,window:win,aisle:ais,together,together_window});
+    // 次の便まで：運行間隔hwを中心に±25%ばらつかせる
+    t += Math.max(3, Math.round(hw*(0.75+Math.random()*0.5)));
+  }
+  // 希望座席を最低1便確保
+  const want=c.seat;
+  if(want==="window"&&!list.some(x=>x.window!=="full"))list[0].window="vac";
+  if(want==="aisle"&&!list.some(x=>x.aisle!=="full"))list[0].aisle="vac";
+  if(want==="together"&&!list.some(x=>x.together!=="full")){list[0].together="vac";}
+  if(want==="together_window"&&!list.some(x=>x.together_window!=="full")){list[0].together_window="vac";list[0].window="vac";}
+
+  // 時間条件：案件開始時に一度だけ確定し、以降は固定（客の要望は変わらない）。
+  // 時刻表側を条件に合わせて調整する。（乗継2本目には適用しない）
+  if(c.timeCond && !isLeg2()){
+    if(c.timeCond.type==="arriveBy"){
+      if(G.deadline==null){
+        const sorted=list.slice().sort((a,b)=>a.eta-b.eta);
+        G.deadline = sorted[1].eta + 10 + (Math.random()*15|0);
+      }
+      // 締切に間に合う便が無ければ、最早便を「simNowの後かつ締切内」へ収める
+      let okFit=list.filter(x=>x.eta<=G.deadline);
+      if(okFit.length===0){
+        const earliest=list.slice().sort((a,b)=>a.eta-b.eta)[0];
+        // 到着が締切の5分前になるよう前倒し
+        let shift=earliest.eta-(G.deadline-5);
+        earliest.dep-=shift;earliest.eta-=shift;
+        // 出発がsimNowより前なら、締切を後ろに緩めて整合（要望時刻を現実化）
+        if(earliest.dep<=G.simNow){
+          const need=G.simNow+3-earliest.dep;
+          earliest.dep+=need;earliest.eta+=need;
+          if(earliest.eta>G.deadline) G.deadline=earliest.eta+5;
+        }
+        okFit=list.filter(x=>x.eta<=G.deadline);
+      }
+      const f=okFit.slice().sort((a,b)=>a.eta-b.eta)[0];
+      if(want==="aisle")f.aisle="vac";
+      else if(want==="window")f.window="vac";
+      else {if(f.window==="full"&&f.aisle==="full")f.window="vac";}
+    }else{ // departAfter
+      if(G.departAfter==null){
+        const sorted=list.slice().sort((a,b)=>a.dep-b.dep);
+        G.departAfter = sorted[1].dep - (Math.random()*8|0);
+      }
+      let okFit=list.filter(x=>x.dep>=G.departAfter);
+      if(okFit.length===0){
+        // 最遅便を条件以降に後ろ倒し
+        const latest=list.slice().sort((a,b)=>b.dep-a.dep)[0];
+        const shift=(G.departAfter+5)-latest.dep;
+        latest.dep+=shift;latest.eta+=shift;
+        okFit=list.filter(x=>x.dep>=G.departAfter);
+      }
+      const f=okFit.slice().sort((a,b)=>a.dep-b.dep)[0];
+      if(want==="aisle")f.aisle="vac";
+      else if(want==="window")f.window="vac";
+      else {if(f.window==="full"&&f.aisle==="full")f.window="vac";}
+    }
+  }
+  G.schedule=list.sort((a,b)=>a.dep-b.dep);
+  // 発車時刻順に並べ替えた後、号数を昇順へ振り直す（時間条件シフトで順序が変わっても保証）。
+  {
+    const down = isDownbound(sysKey, c.from, isLeg2()? c.leg2.to : c.to);
+    let n = 1 + (Math.random()*20|0)*2; if(!down) n+=1; // 奇数/偶数起点
+    G.schedule.forEach((s,idx)=>{ s.no=`${TRAINS[s.sysKey].n} ${n+idx*2}号`; });
+  }
+}
+
+const CUSTOMERS=["スーツ姿の男性","旅行カバンの女性","年配のご夫婦","出張帰りの人","観光客の家族","常連のお客さま"];
+function paxText(p){
+  const parts=[];
+  if(p.adult)parts.push(`大人${p.adult}`);
+  if(p.child)parts.push(`子ども${p.child}`);
+  return parts.join("・");
+}
+function renderSlip(){
+  const c=G.cur;
+  let cust=CUSTOMERS[(G.issued+G.idx)%CUSTOMERS.length];
+  if(c.student)cust="学生";
+  let badges=(c.student?`<span class="badge gak">学割証 提示</span>`:"")+
+             `<span class="badge pax">${paxText(c.pax)}</span>`;
+  let cond="";
+  if(c.timeCond){
+    if(c.timeCond.type==="arriveBy")cond=`<span class="cond">▸ ${hm(G.deadline)} までに着きたい</span>`;
+    else cond=`<span class="cond">▸ ${hm(G.departAfter)} 以降の便で</span>`;
+  }
+  $("slip").innerHTML=
+    `<div class="who">受付 <b>${cust}</b> ${badges}</div>`+
+    `<div class="req"><span class="em">${ST[c.from]}</span> から <span class="em">${ST[c.to]}</span> まで。`+
+    `<span style="font-size:11px;color:var(--paper-ink2);font-weight:700">（営業キロ ${segKm(c)}km）</span><br>`+
+    `<span class="quiet">「${c.flavor}」</span>${cond}</div>`;
+}
+
+function renderBuild(){
+  const b=G.build,c=G.cur;
+  setSlot("sSeg",b.seg?`${ST[c.from]} → ${ST[c.to]}`:null);
+  setSlot("sRoute",b.route?(b.studentApplied?b.route+"（学割適用）":b.route):null);
+
+  // 列車・便/座席：乗継案件は2本分まとめて表示
+  let trainTxt=null, seatTxt=null;
+  if(c.kind==="ticket"&&b.route){
+    trainTxt="（特急なし）"; seatTxt="（座席指定なし）";
+  }else{
+    const parts=[], seatParts=[];
+    b.legs.forEach((lg,i)=>{
+      if(lg.train){
+        const tag=c.leg2?(i===0?"①":"②"):"";
+        parts.push(`${tag}${TRAINS[lg.train]?TRAINS[lg.train].n:lg.train}`);
+        if(lg.trainNo) seatParts.push(`${tag}${lg.trainNo} ${lg.seatGiven?SEAT_LABEL[lg.seatGiven]:"―"}`);
+      }
+    });
+    trainTxt=parts.length?parts.join(" / "):null;
+    seatTxt=seatParts.length?seatParts.join(" / "):null;
+  }
+  setSlot("sTrain",trainTxt);
+  setSlot("sSeat",seatTxt);
+  setSlot("sPax",b.pax?paxText(b.pax):null);
+  setSlot("sKind",b.kind?KIND_LABEL[b.kind].label:null);
+
+  // 発券可否：全レグの便と座席が確定しているか
+  const legsReady = c.kind==="ticket" ? true : b.legs.every(lg=>lg.trainNo&&lg.seatGiven);
+  const ready=b.seg&&b.route&&b.kind&&b.pax&&legsReady;
+  $("issueBtn").disabled=!ready;
+}
+function setSlot(id,val){const el=$(id);if(val){el.textContent=val;el.classList.remove("empty");el.classList.add("set");}else{el.textContent="― 未入力 ―";el.classList.add("empty");el.classList.remove("set");}}
+function trainName(key){if(key==="local_only")return "（特急なし・普通列車）";const t=TRAINS[key];return t?`${t.n}（${t.t}）`:key;}
+
+/* フェーズ: 0区間 1経路 2学割 3列車 4時刻表 5座席 6人数 7券種
+   ticketは 3〜5 をスキップ */
+function renderPhase(){
+  const c=G.cur,b=G.build,opts=$("opts");
+  opts.innerHTML="";opts.style.gridTemplateColumns="1fr 1fr";
+  const total=c.kind==="ticket"?5:8;
+  $("kpStep").textContent=`${stepNo()} / ${total}`;
+  const hint=G.hint; // ベテランはfalse
+
+  switch(G.phase){
+    case 0:
+      $("kpLabel").textContent="① 区間を確定";
+      addOpt(`${ST[c.from]} → ${ST[c.to]}`,hint?"受付票どおり":"",()=>{b.seg=true;adv();},true);
+      addOpt(`${ST[c.to]} → ${ST[c.from]}`,hint?"逆区間（誤）":"",()=>{ if(hint)wrong("区間が逆です");else{b.seg=true;b._segBad=true;adv();} },false);
+      break;
+    case 1:
+      $("kpLabel").textContent="② 経路を選択";
+      shuffle([{t:c.route,ok:true},...c.routeBad.map(r=>({t:r,ok:false}))]).forEach(ch=>{
+        addOptFull(ch.t,"",()=>{ if(ch.ok){b.route=c.route;adv();} else if(hint)wrong("経路が違います"); else{b.route=ch.t;adv();} },ch.ok);
+      });
+      break;
+    case 2:
+      $("kpLabel").textContent="③ 学割の扱い";
+      {
+        const km=segKm(c);
+        const eligible=km>=101;
+        if(c.student && eligible){
+          // 学生・101km以上 → 学割が正解
+          addOptFull("学割乗車券として発券",hint?`${km}km・学割証あり`:"",()=>{b.studentApplied=true;adv();},true);
+          addOptFull("通常運賃で発券",hint?"学割証を見落とす":"",()=>{ if(hint)wrong("学割証が出ています");else{b.studentApplied=false;adv();} },false);
+          addOptFull("101km未満として断る",hint?`${km}kmなので適用可（誤）`:"",()=>{ if(hint)wrong(`${km}kmあり学割の対象です`);else{b.studentApplied=false;b._gakuMisDeny=true;adv();} },false);
+        }else if(c.student && !eligible){
+          // 学生だが101km未満 → 「適用できない」と伝えて通常運賃が正解
+          addOptFull(`101km未満と伝え通常運賃で発券`,hint?`${km}km・学割は101km以上から`:"",()=>{b.studentApplied=false;adv();},true);
+          addOptFull("学割乗車券として発券",hint?"短距離は対象外（誤）":"",()=>{ if(hint)wrong(`${km}kmは101km未満、学割不可です`);else{b.studentApplied=true;adv();} },false);
+        }else{
+          // 学生でない → 通常運賃が正解
+          addOptFull("通常運賃で発券",hint?"学割証の提示なし":"",()=>{b.studentApplied=false;adv();},true);
+          addOptFull("学割乗車券にする",hint?"証明書が無い（誤）":"",()=>{ if(hint)wrong("学割証の提示がありません");else{b.studentApplied=true;adv();} },false);
+        }
+      }
+      break;
+    case 3:
+      {
+        const leg=curLeg();
+        $("kpLabel").textContent= G.cur.leg2 ? `④ 列車を選択（${legSegLabel()}）` : "④ 列車を選択";
+        if(c.kind==="ticket"){leg.train=null;G.phase=6;renderBuild();renderPhase();return;}
+        const good=legTrains().map(k=>({k,ok:true,why:null}));
+        const offRoute=legTrainBad().map(k=>({k,ok:false,why:"route"}));
+        const offSpeed=legSpeedBad().map(k=>({k,ok:false,why:"speed"}));
+        let pool=shuffle([...good,...offRoute,...offSpeed]);
+        let ch=pool.slice(0,4);
+        if(!ch.some(x=>x.ok))ch[0]=good[0];
+        if(offSpeed.length && !ch.some(x=>x.why==="speed")){ ch[ch.length-1]=offSpeed[0]; }
+        ch=shuffle(ch);
+        ch.forEach(o=>{addOpt(trainName(o.k),TRAINS[o.k]?TRAINS[o.k].t:"",()=>{
+          if(o.ok){ leg.train=o.k; if(o.k!==G.schedSys){buildSchedule(o.k);} adv(); }
+          else if(hint){
+            if(o.why==="speed") wrong("お客さまのご希望（お急ぎ）に合いません");
+            else wrong("その列車はこの経路を走りません");
+          }
+          else { leg.train=o.k; buildSchedule(o.k); adv(); }
+        },o.ok);});
+      }
+      break;
+    case 4: renderSchedule();break;
+    case 5: renderSeatPick();break;
+    case 6:
+      $("kpLabel").textContent=(c.kind==="ticket"?"④":"⑦")+" 人数を入力";
+      renderPax();
+      break;
+    case 7:
+      $("kpLabel").textContent=(c.kind==="ticket"?"⑤":"⑧")+" 券種を選択";
+      shuffle(["both","ticket","limited"]).forEach(k=>{addOptFull(KIND_LABEL[k].label,"",()=>{b.kind=k;renderBuild();},k===c.kind);});
+      break;
+  }
+}
+function stepNo(){
+  const c=G.cur;
+  if(c.kind==="ticket"){ if(G.phase<=2)return G.phase+1; if(G.phase===6)return 4; if(G.phase===7)return 5; return G.phase+1; }
+  return G.phase+1;
+}
+
+/* 時刻表：発時刻・列車名・到着(eta)・空席。時間条件に対する適合を内部判定 */
+function renderSchedule(){
+  const c=G.cur,b=G.build,leg=curLeg(),opts=$("opts");
+  const tc = c.timeCond && !isLeg2();
+  let lbl= c.leg2 ? `⑤ 時刻表（${legSegLabel()}）` : "⑤ 時刻表から便を選ぶ";
+  if(tc)lbl += c.timeCond.type==="arriveBy"?`（${hm(G.deadline)}までに到着）`:`（${hm(G.departAfter)}以降に出発）`;
+  $("kpLabel").textContent=lbl;
+  opts.style.gridTemplateColumns="1fr";
+  G.schedule.forEach(s=>{
+    const want=c.seat;
+    let seatState;
+    if(want==="window") seatState=s.window;
+    else if(want==="aisle") seatState=s.aisle;
+    else if(want==="together") seatState=s.together;
+    else if(want==="together_window") seatState=s.together_window;
+    else seatState=(s.window!=="full"?s.window:s.aisle); // any（1人）
+    const cls=seatState==="vac"?"vac":seatState==="few"?"few":"full";
+    const txt=seatState==="vac"?"空席":seatState==="few"?"残少":"満席";
+    const wantLabel=(want==="window"||want==="aisle")?SEAT_LABEL[want]+" ":(want==="together"||want==="together_window")?"並び ":"";
+    const btn=document.createElement("button");btn.className="opt tt full";
+    btn.innerHTML=`<span class="timecol"><b>${hm(s.dep)}発</b><small>${s.no}</small><small class="eta">${hm(s.eta)}着</small></span>`+
+      `<span class="seat ${cls}">${wantLabel}${txt}</span>`;
+    // 正解便：時間条件を満たし、希望座席が満席でない
+    let timeFit=true;
+    if(tc){
+      if(c.timeCond.type==="arriveBy"&&s.eta>G.deadline)timeFit=false;
+      if(c.timeCond.type==="departAfter"&&s.dep<G.departAfter)timeFit=false;
+    }
+    btn._correct = timeFit && seatState!=="full";
+    btn.onclick=()=>{
+      if(tc){
+        if(c.timeCond.type==="arriveBy"&&s.eta>G.deadline){ G.hint?wrong(`${hm(G.deadline)}までに着きません`):commitBadSched(s); return; }
+        if(c.timeCond.type==="departAfter"&&s.dep<G.departAfter){ G.hint?wrong(`${hm(G.departAfter)}より前の便です`):commitBadSched(s); return; }
+      }
+      if(seatState==="full"){ offerRetry(); return; }
+      leg.trainNo=s.no;leg.selSched=s;leg._schedBad=false;adv();
+    };
+    opts.appendChild(btn);
+  });
+}
+function commitBadSched(s){ const leg=curLeg();leg.trainNo=s.no;leg.selSched=s;leg._schedBad=true;adv(); }
+function offerRetry(){
+  const opts=$("opts");opts.style.gridTemplateColumns="1fr";
+  $("kpLabel").textContent="満席です ─ どうしますか？";opts.innerHTML="";
+  addOptFull("別の便を案内する",G.hint?"空いている便を選び直す":"",()=>{renderSchedule();});
+  addOptFull("満席のまま無理に発券",G.hint?"座席が取れません（誤）":"",()=>{ if(G.hint){wrong("満席の便を案内しました");}else{const leg=curLeg();const s=G.schedule[0];leg.trainNo=s.no;leg.selSched=s;leg._schedBad=true;adv();} });
+}
+
+function renderSeatPick(){
+  const c=G.cur,b=G.build,leg=curLeg(),opts=$("opts");
+  const s=leg.selSched;
+  const npax=c.pax.adult+c.pax.child;
+  $("kpLabel").textContent= c.leg2 ? `⑥ 座席を指定（${legSegLabel()}）` : "⑥ 座席を指定";
+
+  // 1人客：従来どおり窓側/通路側
+  if(npax<=1){
+    opts.style.gridTemplateColumns="1fr 1fr";
+    const mk=side=>{
+      const state=s[side],avail=state!=="full";
+      const isWant=(c.seat==="any"||c.seat===side)&&avail;
+      addOpt(SEAT_LABEL[side],avail?(state==="few"?"残少":"空席"):"満席",()=>{
+        if(!avail){ G.hint?wrong(`その便は${SEAT_LABEL[side]}が満席です`):(function(){leg.seatGiven=side;leg._seatBad=true;adv();})(); return; }
+        if(c.seat==="any"||c.seat===side){leg.seatGiven=side;leg._seatBad=false;adv();}
+        else if(G.hint)wrong(`お客さまの希望は${SEAT_LABEL[c.seat]}です`);
+        else{leg.seatGiven=side;leg._seatBad=true;adv();}
+      },isWant);
+    };
+    mk("window");mk("aisle");
+    if(c.seat==="any"){addOptFull("どちらでも可（窓側で確保）",G.hint?"おまかせ希望":"",()=>{const side=s.window!=="full"?"window":"aisle";leg.seatGiven=side;leg._seatBad=false;adv();},true);}
+    return;
+  }
+
+  // 複数人客：並び席を主軸に
+  opts.style.gridTemplateColumns="1fr";
+  const want=c.seat; // together / together_window / any
+  // 選択肢を組む。正解＝客の希望に一致。
+  const choices=[];
+  // 並び席（窓側含む）
+  choices.push({key:"together_window", label:`${npax}人 窓側を含む並びで確保`, state:s.together_window});
+  // 並び席（どこでも）
+  choices.push({key:"together", label:`${npax}人 並びで確保（窓側問わず）`, state:s.together});
+  // バラバラ（並びでなくてよい客のとき正解になりうる）
+  choices.push({key:"separate", label:`離れた席でもよいか確認`, state:"vac"});
+
+  choices.forEach(ch=>{
+    const avail = ch.state!=="full";
+    const sub = ch.state==="vac"?"空席あり":ch.state==="few"?"残少":"満席";
+    // 正解判定（希望keyと一致かつ満席でない）
+    let okFlag=false;
+    if(want==="together_window") okFlag=(ch.key==="together_window");
+    else if(want==="together") okFlag=(ch.key==="together"||ch.key==="together_window");
+    else if(want==="any") okFlag=(ch.key==="together"||ch.key==="together_window");
+    const btn=document.createElement("button");
+    btn.className="opt tt full";
+    btn._correct = okFlag && avail;
+    btn.innerHTML=`<span>${ch.label}</span><span class="seat ${ch.state==="vac"?"vac":ch.state==="few"?"few":"full"}">${sub}</span>`;
+    btn.onclick=()=>{
+      // 満席の選択は不可
+      if(!avail){
+        if(G.hint){wrong("その便ではその席の取り方ができません");return;}
+        else{leg.seatGiven=ch.key;leg._seatBad=true;adv();return;}
+      }
+      // 正解判定：客の希望keyと一致か
+      // want==="together_window" の正解は together_window のみ
+      // want==="together" の正解は together（together_windowでも可：より良い席なのでOK扱い）
+      // want==="any" は together / together_window どちらでもOK
+      let ok=false;
+      if(want==="together_window") ok = (ch.key==="together_window");
+      else if(want==="together") ok = (ch.key==="together"||ch.key==="together_window");
+      else if(want==="any") ok = (ch.key==="together"||ch.key==="together_window");
+      if(ok){leg.seatGiven=ch.key;leg._seatBad=false;adv();}
+      else if(G.hint){
+        if(ch.key==="separate") wrong("並びの席を希望されています");
+        else if(want==="together_window") wrong("窓側を含む並びがご希望です");
+        else wrong("ご希望に合いません");
+      }
+      else{leg.seatGiven=ch.key;leg._seatBad=true;adv();}
+    };
+    opts.appendChild(btn);
+  });
+}
+
+/* 会話フェーズ：お客さまの追加のお尋ねに応対する。
+   正しい応対を選ぶと加点、誤ると減点。応対後は客の返答を表示し、続けて人数入力へ。 */
+function renderTalk(){
+  const c=G.cur,b=G.build,opts=$("opts");
+  $("kpLabel").textContent="お客さまとの応対";
+  opts.style.gridTemplateColumns="1fr";
+  const bubble=document.createElement("div");
+  bubble.style.cssText="grid-column:1/-1;background:var(--paper);color:var(--paper-ink);border-radius:3px;padding:11px 13px;font-size:13px;font-weight:600;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,.4);margin-bottom:2px;position:relative";
+  bubble.innerHTML=`<span style="font-size:9px;letter-spacing:.1em;color:var(--paper-ink2);display:block;margin-bottom:4px">お客さま</span>「${c.talk.q}」`;
+  opts.appendChild(bubble);
+  shuffle(c.talk.opts.slice()).forEach(o=>{
+    addOptFull(o.t,"",()=>{
+      if(o.ok){
+        b._talkDone=true;b._talkBad=false;
+        G.score+=20;updateRail();
+        showTalkReply(true);
+      }else{
+        if(G.hint){ wrong(o.why||"応対が不適切です"); }
+        else { b._talkDone=true;b._talkBad=true; G.score=Math.max(0,G.score-15);updateRail(); showTalkReply(false); }
+      }
+    },o.ok);
+  });
+}
+
+/* 応対後：選択肢を消し、客の返答を表示。続けて発券（人数入力）へ。 */
+function showTalkReply(good){
+  const c=G.cur,opts=$("opts");
+  $("kpLabel").textContent="お客さまの返答";
+  opts.innerHTML="";opts.style.gridTemplateColumns="1fr";
+  const reply = good ? (c.talk.reply||"ありがとう、お願いします。") : "（お客さまは少し納得していない様子）";
+  const bubble=document.createElement("div");
+  bubble.style.cssText="grid-column:1/-1;background:var(--paper);color:var(--paper-ink);border-radius:3px;padding:11px 13px;font-size:13px;font-weight:600;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,.4);margin-bottom:6px";
+  bubble.innerHTML=`<span style="font-size:9px;letter-spacing:.1em;color:var(--paper-ink2);display:block;margin-bottom:4px">お客さま</span>「${reply}」`;
+  opts.appendChild(bubble);
+  const next=document.createElement("button");
+  next.className="opt full";next.style.background="#1d4633";next.style.borderColor="var(--phos-dim)";
+  next.innerHTML=`<span style="text-align:center;width:100%;font-weight:700">続けて発券する</span>`;
+  next.onclick=()=>{ renderPax(); };
+  opts.appendChild(next);
+}
+
+/* 人数入力：大人・子どもをカウンタで合わせる */
+let paxDraft={adult:0,child:0};
+function renderPax(){
+  const c=G.cur,b=G.build,opts=$("opts");
+  // 会話フェーズ：人数を入れる前にお客さまの追加のお尋ねに応対する
+  if(c.talk && !b._talkDone){ renderTalk(); return; }
+  $("kpLabel").textContent=(c.kind==="ticket"?"④":"⑦")+" 人数を入力";
+  opts.innerHTML="";
+  opts.style.gridTemplateColumns="1fr";
+  const wrap=document.createElement("div");
+  wrap.style.cssText="display:flex;flex-direction:column;gap:8px";
+  const row=(label,key)=>{
+    const r=document.createElement("div");
+    r.style.cssText="display:flex;align-items:center;gap:8px;background:var(--steel);border:1px solid var(--steel-line);border-radius:3px;padding:8px 10px";
+    r.innerHTML=`<span style="flex:1;font-size:13px;color:var(--phos-soft)">${label}</span>`;
+    const mk=(t,d)=>{const x=document.createElement("button");x.textContent=t;x.style.cssText="font-family:inherit;font-size:18px;font-weight:700;width:38px;height:38px;border-radius:3px;border:1px solid var(--steel-line);background:#0d1c16;color:var(--phos-soft);cursor:pointer";x.onclick=()=>{paxDraft[key]=Math.max(0,Math.min(6,paxDraft[key]+d));num.textContent=paxDraft[key];};return x;};
+    const num=document.createElement("span");num.textContent=paxDraft[key];num.style.cssText="font-size:20px;font-weight:700;width:30px;text-align:center;color:var(--phos);font-variant-numeric:tabular-nums";
+    r.appendChild(mk("－",-1));r.appendChild(num);r.appendChild(mk("＋",1));
+    return r;
+  };
+  // フェーズ入場時にドラフト初期化（既存値があれば復元）
+  if(!G.build._paxInit){paxDraft={adult:0,child:0};G.build._paxInit=true;}
+  wrap.appendChild(row("大人","adult"));
+  wrap.appendChild(row("子ども（小児運賃）","child"));
+  const conf=document.createElement("button");
+  conf.className="opt full";conf.style.background="#1d4633";conf.style.borderColor="var(--phos-dim)";
+  conf.innerHTML=`<span style="text-align:center;width:100%;font-weight:700">この人数で確定</span>`;
+  conf.onclick=()=>{
+    if(paxDraft.adult+paxDraft.child===0){ if(G.hint)wrong("人数が0です");return; }
+    G.build.pax={adult:paxDraft.adult,child:paxDraft.child};
+    if(G.hint && (paxDraft.adult!==c.pax.adult||paxDraft.child!==c.pax.child)){
+      // 初心者は人数ミスもその場で指摘
+      wrong(`要望は ${paxText(c.pax)} です`); G.build.pax=null; return;
+    }
+    adv();
+  };
+  wrap.appendChild(conf);
+  opts.appendChild(wrap);
+}
+
+function adv(){
+  const c=G.cur;
+  // 座席フェーズ(5)完了時、乗継があり1本目を終えたばかりなら2本目の列車選択へ戻る
+  if(G.phase===5 && c.leg2 && G.build.legIndex===0){
+    G.build.legIndex=1;
+    G.schedSys=null;           // 2本目の時刻表を新規生成させる
+    G.phase=3;
+    renderBuild();renderPhase();
+    return;
+  }
+  if(G.phase<7)G.phase++;
+  if(c.kind==="ticket"&&G.phase>=3&&G.phase<=5)G.phase=6;
+  // 人数フェーズに入る時はドラフト初期化フラグを落とす
+  if(G.phase===6){G.build._paxInit=false;}
+  renderBuild();renderPhase();
+}
+function goBack(){
+  const c=G.cur;if(G.phase===0)return;
+  const b=G.build;
+
+  // 乗継2本目の作業中（phase3-5, legIndex1）の戻り処理
+  if(c.leg2 && b.legIndex===1 && G.phase>=3 && G.phase<=5){
+    if(G.phase>3){
+      // 2本目の中で1フェーズ戻る
+      const leg=b.legs[1];
+      if(G.phase===5){G.phase=4;leg.seatGiven=null;leg._seatBad=false;}
+      else if(G.phase===4){G.phase=3;leg.trainNo=null;leg.selSched=null;}
+      renderBuild();renderPhase();return;
+    }else{
+      // 2本目の列車選択から戻る → 1本目の座席選択へ
+      b.legIndex=0;G.phase=5;
+      b.legs[1].train=null;b.legs[1].trainNo=null;b.legs[1].selSched=null;b.legs[1].seatGiven=null;
+      // 1本目の時刻表を復元するため再生成
+      G.schedSys=null;buildSchedule(b.legs[0].train);
+      renderBuild();renderPhase();return;
+    }
+  }
+
+  let p=G.phase-1;
+  if(c.kind==="ticket"&&p>=3&&p<=5)p=2;
+  G.phase=p;
+  if(p<7)b.kind=null;
+  if(p<6){b.pax=null;b._paxInit=false;b._talkDone=false;b._talkBad=false;}
+  if(p<5){b.legs.forEach(lg=>{lg.seatGiven=null;lg._seatBad=false;});}
+  if(p<4){b.legs.forEach(lg=>{lg.trainNo=null;lg.selSched=null;});}
+  if(p<3){b.legs.forEach(lg=>{lg.train=null;});b.legIndex=0;}
+  if(p<2)b.studentApplied=null;
+  if(p<1)b.route=null;
+  if(p===6)b._paxInit=false;
+  renderBuild();renderPhase();
+}
+
+function wrong(msg){
+  G.streak=0;G.score=Math.max(0,G.score-25);updateRail();
+  const el=$("kpLabel");el.textContent="✕ "+msg;el.style.color="var(--red)";
+  clearTimeout(G._mt);G._mt=setTimeout(()=>{el.style.color="";renderPhase();},1150);
+}
+
+function issue(){
+  const c=G.cur,b=G.build;stopTimer();
+  const segOK=b.seg===true&&!b._segBad;
+  const routeOK=b.route===c.route;
+  // 学割が正しく適用されるべきは「学生 かつ 101km以上」のときのみ
+  const shouldGakuwari = !!c.student && gakuwariEligible(c);
+  const studentOK = shouldGakuwari === (!!b.studentApplied);
+
+  // 列車・座席・時間は全レグで評価
+  let trainOK=true, seatOK=true, speedMis=false;
+  if(c.kind==="ticket"){
+    trainOK = b.legs[0].train===null;
+  }else{
+    b.legs.forEach((lg,i)=>{
+      const good = (i===1? c.leg2.trains : c.trains);
+      if(!good.includes(lg.train)){ trainOK=false; if((c.speedBad||[]).includes(lg.train))speedMis=true; }
+      // 座席は選択時に希望適合を判定済み（_seatBad）。未指定も不可。
+      if(!lg.seatGiven || lg._seatBad) seatOK=false;
+    });
+  }
+  let timeOK=true;
+  const s1=b.legs[0].selSched;
+  if(c.timeCond&&s1){
+    if(c.timeCond.type==="arriveBy")timeOK=s1.eta<=G.deadline;
+    else timeOK=s1.dep>=G.departAfter;
+  }
+  const paxOK=b.pax&&b.pax.adult===c.pax.adult&&b.pax.child===c.pax.child;
+  const kindOK=b.kind===c.kind;
+  const allOK=segOK&&routeOK&&studentOK&&trainOK&&timeOK&&seatOK&&paxOK&&kindOK;
+
+  G.issued++;const errs=[];
+  if(!segOK)errs.push("区間が逆");
+  if(!routeOK)errs.push("経路不一致");
+  if(!studentOK){
+    if(shouldGakuwari) errs.push("学割が未適用");
+    else if(c.student && !gakuwariEligible(c)) errs.push("101km未満なのに学割適用");
+    else errs.push("学割の誤適用");
+  }
+  if(!trainOK){
+    if(speedMis) errs.push("お急ぎ希望に合わない列車");
+    else errs.push(c.leg2?"乗継列車が不一致":"列車不一致");
+  }
+  if(!timeOK)errs.push(c.timeCond&&c.timeCond.type==="arriveBy"?"到着が間に合わない便":"指定時刻より前の便");
+  if(!seatOK)errs.push("座席が希望と不一致");
+  if(!paxOK)errs.push("人数が不一致");
+  if(!kindOK)errs.push("券種不一致");
+
+  let gained;
+  if(allOK){G.correct++;G.streak++;gained=130+Math.round(G.remain*4)+(G.streak-1)*12;G.score+=gained;}
+  else{G.streak=0;gained=-50;G.score=Math.max(0,G.score-50);}
+  updateRail();showVerdict(allOK,c,b,errs,gained);
+}
+
+function showVerdict(ok,c,b,errs,gained){
+  const v=$("verdict");v.className="verdict "+(ok?"ok":"ng");
+  const talkLine=c.talk?`<div style="color:${b._talkBad?'#c0352c':'#3f7a52'}">応対：${b._talkBad?'お客さまへの対応に難あり':'丁寧に対応できた'}</div>`:"";
+
+  let trainBlock="";
+  if(c.kind==="ticket"){
+    trainBlock=`<div>列車：（特急なし）</div><div>座席：指定なし</div>`;
+  }else{
+    b.legs.forEach((lg,i)=>{
+      const tag=c.leg2?(i===0?`${ST[c.from]}→${c.leg2.via}　`:`${c.leg2.via}→${ST[c.to]}　`):"";
+      // 列車名＋号数（trainNoが「のぞみ 15号」形式。未確定時は列車名のみ）
+      const tn=lg.trainNo?lg.trainNo:(lg.train?(TRAINS[lg.train]?TRAINS[lg.train].n:lg.train):"―");
+      const eta=lg.selSched?`（${hm(lg.selSched.dep)}→${hm(lg.selSched.eta)}）`:"";
+      trainBlock+=`<div>${tag}${tn} ${eta}</div>`;
+      trainBlock+=`<div style="padding-left:1em">座席：${lg.seatGiven?SEAT_LABEL[lg.seatGiven]:"―"}</div>`;
+    });
+  }
+
+  const tk=`<div class="ticket"><div class="tt">JR ご案内 ─ 発券控</div>`+
+    `<div><b>${ST[c.from]} → ${ST[c.to]}</b>${b.studentApplied?"　【学割】":""}${c.leg2?"　[敦賀乗換]":""}</div>`+
+    `<div>経路：${b.route||"―"}</div>`+
+    trainBlock+
+    `<div>人数：${b.pax?paxText(b.pax):"―"}</div>`+
+    `<div>券種：${b.kind?KIND_LABEL[b.kind].label:"―"}</div>`+talkLine+
+    (ok?"":`<div class="err">✕ ${errs.join(" / ")}</div>`)+`</div>`;
+  v.innerHTML=`<div class="big">${ok?"発券 OK":"誤発券"}</div>`+tk+
+    `<div class="big" style="font-size:20px;color:${gained>=0?'var(--phos)':'var(--red)'}">${gained>=0?"+":""}${gained} 点</div>`+
+    `<div class="tap">画面をタップで次のお客さま</div>`;
+  $("flash").classList.add("on");
+}
+function dismissVerdict(){if(!$("flash").classList.contains("on"))return;$("flash").classList.remove("on");nextCase();}
+
+function startTimer(){stopTimer();G.lastTick=performance.now();G.running=true;tick();}
+function stopTimer(){G.running=false;if(G.timer)cancelAnimationFrame(G.timer);}
+function tick(){if(!G.running)return;const now=performance.now();G.remain-=(now-G.lastTick)/1000;G.lastTick=now;if(G.remain<=0){G.remain=0;updateTimerUI();timeUp();return;}updateTimerUI();G.timer=requestAnimationFrame(tick);}
+function updateTimerUI(){$("rTime").textContent=G.remain.toFixed(1);const pct=Math.max(0,G.remain/G.perCase*100),bar=$("tbar"),tv=$("rTime");bar.style.width=pct+"%";bar.className="";tv.className="val";if(G.remain<G.perCase*.25){bar.classList.add("bad");tv.classList.add("bad");}else if(G.remain<G.perCase*.5){bar.classList.add("warn");tv.classList.add("warn");}}
+function timeUp(){
+  stopTimer();G.issued++;G.streak=0;G.score=Math.max(0,G.score-50);updateRail();
+  const c=G.cur,v=$("verdict");v.className="verdict ng";
+  const trainStr = c.kind==="ticket" ? "特急なし"
+    : (c.leg2 ? c.trains.map(trainName).join("・")+" → "+c.leg2.trains.map(trainName).join("・")
+              : c.trains.map(trainName).join("・"));
+  v.innerHTML=`<div class="big">時間切れ</div><div class="ticket"><div class="tt">未発券</div>`+
+    `<div><b>${ST[c.from]} → ${ST[c.to]}</b>${c.leg2?"（敦賀乗換）":""} が間に合いませんでした。</div>`+
+    `<div class="err">正：${c.route} / ${trainStr}${c.student&&gakuwariEligible(c)?" / 学割":""}${c.seat!=="none"?" / "+SEAT_LABEL[c.seat]:""} / ${paxText(c.pax)} / ${KIND_LABEL[c.kind].label}</div></div>`+
+    `<div class="big" style="font-size:20px;color:var(--red)">-50 点</div><div class="tap">画面をタップで次のお客さま</div>`;
+  $("flash").classList.add("on");
+}
+
+function updateRail(){$("rScore").textContent=G.score;$("rStreak").textContent=G.streak;$("rStreak").className="val"+(G.streak>=3?" warn":"");}
+function endGame(){
+  stopTimer();const acc=G.issued?Math.round(G.correct/G.issued*100):0;
+  $("fIssued").textContent=G.correct+"/"+G.issued;$("fAcc").textContent=acc+"%";$("fScore").textContent=G.score;
+  let g="C",t="精進しましょう",col="var(--amber)";
+  const thr=G.mode==="veteran"?1100:1500;
+  if(acc>=95&&G.score>thr){g="S";t=G.mode==="veteran"?"繁忙期も完璧":"達人の窓口";col="var(--phos)";}
+  else if(acc>=85){g="A";t="一人前の窓口係";col="var(--phos-soft)";}
+  else if(acc>=70){g="B";t="まずまずの対応";col="var(--phos-soft)";}
+  else if(acc<50){g="D";t="再研修が必要です";col="var(--red)";}
+  $("gradeMark").textContent=g;$("gradeMark").style.color=col;$("endTitle").textContent=t;
+  $("endScreen").classList.remove("hide");
+}
+
+function addOpt(text,sub,fn,correct){const b=document.createElement("button");b.className="opt";b.innerHTML=`<span>${text}</span>`+(sub?`<small>${sub}</small>`:"");b.onclick=fn;b._correct=!!correct;$("opts").appendChild(b);}
+function addOptFull(text,sub,fn,correct){const b=document.createElement("button");b.className="opt full";b.innerHTML=`<span>${text}</span>`+(sub?`<small>${sub}</small>`:"");b.onclick=fn;b._correct=!!correct;$("opts").appendChild(b);}
+
+$("startBtn").onclick=startGame;
+$("againBtn").onclick=()=>{$("endScreen").classList.add("hide");$("startScreen").classList.remove("hide");};
+$("issueBtn").onclick=()=>{if(!$("issueBtn").disabled)issue();};
+$("backBtn").onclick=goBack;
+$("flash").onclick=dismissVerdict;
+
+// ── 駅助役ヘルプ ──
+$("helpBtn").onclick=()=>{ $("helpModal").classList.add("on"); };
+$("helpNo").onclick=()=>{ $("helpModal").classList.remove("on"); };
+$("helpYes").onclick=()=>{
+  $("helpModal").classList.remove("on");
+  G.score=Math.max(0,G.score-80); updateRail();
+  revealAnswer();
+};
+function revealAnswer(){
+  // 現在の選択肢のうち正解(_correct)をオレンジで開く。
+  const opts=$("opts");
+  const btns=opts.querySelectorAll("button");
+  let any=false;
+  btns.forEach(b=>{ if(b._correct){ b.classList.add("reveal"); any=true; } });
+  // 人数フェーズはカウンタなので、正解人数をラベルに表示
+  if(!any && G.phase===6 && G.cur){
+    const lbl=$("kpLabel");
+    lbl.textContent="助役：正しい人数は "+paxText(G.cur.pax);
+    lbl.style.color="var(--amber)";
+    setTimeout(()=>{lbl.style.color="";},2600);
+  }
+}
+document.querySelectorAll("#modeSel .mode").forEach(m=>{m.onclick=()=>{document.querySelectorAll("#modeSel .mode").forEach(x=>x.classList.remove("sel"));m.classList.add("sel");G.mode=m.dataset.mode;};});
+startClock();
+</script>
+</body>
+</html>
